@@ -184,27 +184,51 @@ I> 为了更容易创建配置文件，可以创建一个配置文件的模板�
 <!--
 Having a local development environment is something you should strive for. With local I mean on your actual computer, not on a centralized server somewhere you access through a VPN service or similar. Being able to work on your code anywhere without an internet connection is nice.
 -->
+最好有一个本地开发环境。本地开发环境是指在自己的工作电脑上，而不是需要通过VPN或者类似网络工具访问的中心服务器上。在没有网络的环境依然可以编码。（译者注：在小团队环境中可以这样，但是对于大型项目，有可能依赖比较多，比如mysql，redis，mongodb，memcached等等，搭建本地环境比较困难，但是，随着虚拟机、docker容器等技术的成熟和推广，作者的建议是可以实现的）
 
-
+<!--
 I always run my local development environment in a virtual machine with [Vagrant](http://www.vagrantup.com). This allows me to go haywire with everything and if I fuck up the environment badly enough I just destroy the virtual machine and provision it from scratch. It's great for testing things in your environment without having to worry about breaking something on your computer or for someone else. Want to test your application in a different PHP version for example? Install, test, reset.
+-->
+作者的本地环境建立在虚拟机[Vagrant](http://www.vagrantup.com)上。如果环境被弄乱了，可以直接销毁虚拟机并重新建立，不用担心环境被弄乱的问题。如果想在不同的PHP版本下测试，安装一个新的虚拟机，进行测试，最后重置即可。
 
+<!--
 The main point is that you want to be able to work on your application whenever. With a local environment you can work on a flight across the atlantic and push/pull changes as soon as you get a connection to the internet. If you end up in a situation where you are dependent on an internet connection to work you'll curse yourself when you don't have one.
+-->
+建立本地环境的主要考虑就是无论何时都可以进行开发。当飞行跨越大西洋时，可以工作，并在能连上网络时进行push/pull代码的操作。如果开发环境依赖互联网，那么在没有网络的时候，只能抓瞎了。
 
+<!--
 Having your local environment repeatable is the number one tool for introducing new team members to your code. Imagine you start at a new job and all you do it `git clone <insert vagrant repository here>` and then a `vagrant up` and you're all set. Sounds like a dream doesn't it? Usually time is invested in writing documentation for setting up a local environment and that documentation is more than often outdated and no one really wants to take responsibility for keeping it updated.
+-->
+本地环境可以重复搭建是最重要的，特别是团队中引入新的成员的时候。想象一下，引入新的成员的时候，只需要执行`git clone <vagrant仓库>`，然后执行`vagrant up`，这样环境就搭建好了。听起来像做梦一样，因为通常情况下，为了建立本地环境写文档是很消耗时间的，而且文档经常跟不上最新的变更，没有人愿意负责文档更新。
 
-## 3.4 Development environment
+## 3.4 开发环境
 
+<!--
 The name of this one can be somewhat misleading. No development work should be done here but the name comes from the branching strategy in [chapter 6 on Version Control](#chapter-version-control). This is a common ground for features and bug fixes where all code that should be shared and tested by others will end up here. The first step after finishing something in your local environment will most often be to merge it to your main branch and push it to the development environment.
+-->
+这里的开发环境的叫法可能有误导。真正的开发工作不是在这里完成的，而是在本地环境完成。称之为开发环境是因为[第六章](#版本控制)中的分支策略。所有的特性和bug修复都在这里合并和测试。大概的流程是在本地环境写好代码后，合并到本地的主分支，最后推送代码到开发环境。
 
+<!--
 It's a great place for early testing by yourself and your team. Getting an extra set of eyes on something early on can be a great quality tool. Code reviews should be performed before something is merged and pushed to this environment since it's a very effective tool for quality, knowledge sharing and stomping out some obvious errors. All developers will have certain domain knowledge and someone else could perhaps tell right away if your code won't work with a specific part of the domain.
+-->
+个人和团队的早期测试可以在这里进行。尽早关注是一个很棒的质量手段。代码审查应该在代码被合并并推送到开发环境之前，这样对于保证质量，知识分享和避免明显的错误非常有效。其他开发者会有领域知识，如果你对领域的某些部分不熟悉，在代码审查时，某个开发者会告知正确的知识。
 
-## 3.5 Staging environment
+## 3.5 预发布环境
 
+<!--
 Your staging environment is very important and it should to the fullest extent possible duplicate your production environment. This is where you do your final testing of your code before you push it to production and serve your application to the users.
+-->
+预发布环境非常重要，应该尽可能保持和生产环境一致。上线前最后的测试在这里进行。
 
+<!--
 With duplicate to the fullest extent I do not mean that it should connect to the production database for example. Having a database that gets updated with a production dump every 24 hours is good enough. Does your application have multiple database instances and perhaps connect to a cache cluster? The staging environment will need that as well. Is the application running on multiple nodes behind a load balancer? Set up your staging environment in the same say. Remember, **as close to the production environment as possible**.
+-->
+尽可能和生产环境一致，并不是说需要连接到生产环境的数据库。预发布环境应该有一个独立于生产环境的数据库，保证没24小时同步一次生产环境数据库一般来说就够用了。如果应用有多个数据库实例，甚至有缓存集群，那么预发布环境也需要有独立的环境。如果应用运行在负载均衡之后的多个节点上，也要保证预发布环境有同样的环境。记住，**尽最大可能和生产环境一致**。
 
+<!--
 Being able to test against production data is sometimes necessary but be extremely careful when doing this for obvious reasons. Make sure you do not test features that for example could end up e-mailing users. Your staging environment should perhaps only allow outgoing e-mail to certain addresses that belongs to people in your team or in your company. Here is a simple example that logs the e-mail if it's not in production:
+-->
+按照生产环境进行测试有时是必须的，但是某些特殊情况下要注意。比如给用户发送邮件，预发布环境应该只给团队或者公司的人发送邮件。下面是一个例子，当运行在非生产环境时，对邮件进行日志记录:
 
 {lang=php}
 ~~~
@@ -231,33 +255,51 @@ function sendEmail ($to, $from, $subject, $message) {
 }
 ~~~
 
-## 3.6 Production environment
-
+## 3.6 生产环境
+<!--
 This one is quiet obvious and it's the server(s) serving your application to your end users. Whether it's one server or multiple ones behind load balancer; this is the endpoint for your users.
+-->
+生产环境就是运行服务，为用户提供服务的环境（译者注：也称之为线上环境）,无论是一台服务器，还是负载均衡之后的多台服务器。这里是用户的终点。
 
+<!--
 It will contain an as stable as possible code base with code that is extensively tested and as bug free as possible. What is to be said here is that **it's for this environment we need a great deployment process**. All the effort we put in to the process will reflect on the quality and stability of your production environment.
+-->
+这里的代码必须是测试过的，并且尽可能没有bug的。**生产环境需要一个好的部署流程**。所有对流程的努力都会改进生产环境的质量和稳定性。
 
-## 3.7 Testing environment(s)
+## 3.7 测试环境
 
+<!--
 Having one or multiple test environments is not obligatory but it is something that can bring a lot of benefits for your application. Depending on the size of your application it will make testing a lot easier. If you are able to set up test environment for specific branches for example, you can easily give access to testers for feature branches.
+-->
+一个或多个测试环境并不是强制性的，但是对于应用是有好处的。根据应用的规模，能让测试更容易。如果能够为特定分支建立测试环境，可以让测试人员更容易的测试分支中的某些特性。
 
+<!--
 There are a few things that are essential for having success with test environments: speed and repeatability. If you can without major effort set up a test environment and check out a certain branch, your testing possibilities will increase dramatically. When I say speed I would consider 30 minutes or less a reasonable amount of time. Longer than that and you can start to experience too big discrepancies in development speed and test environment speed. Also If you're not able to update your test environment with the latest changes it will hardly be worth your time. The loop here is to get quick feedback on your code and react to it. Fix the code, push to the test environment again and then get new feedback.
+-->
+建立好的测试环境，还需要注意速度和复制性。如果能轻松的搭建测试环境并签出特定的分支，测试效果会更好。这里的速度指的是30分钟或者更小的一个合理时间。过长的时间会让开发速度和测试速度的差异过大，而不能尽快的得到测试结果的反馈。当然，保证测试环境是最新的代码是最基本的要求了。在测试环境，开发同学需要尽快得到测试结果的反馈并修复问题。修复代码，推送到测试环境，然后得到新的反馈，就是这样一个循环。
 
-## 3.8 Simplify server access
-
+## 3.8 简化服务器访问
+<!--
 In the process of managing multiple servers you end up wanting to make access to them faster and easier. First of all creating host entries for your various servers will remove the need of looking up IP addresses. For some servers you won't need it since they will be publicly accessible through domains such as your production environment. But even for your production environment you might have servers for databases, load balancers, caches, etc and they might not be accessible through a public domain. But you will still need to access them on a regular basis for maintenance and debugging so create host entries for them.
+-->
+在管理多台服务器时，需要更快速和容易的访问。首先，建立host列表，这样可以避免查找IP地址。通过公网域名是可以访问生产环境服务器，所以不需要加入到host列表。但是对于关联的数据库，负载均衡，缓存等，通过公网域名是不能访问的，但是有可能因为运维的需要，还是需要将其加入到host列表中。
 
+<!--
 The second thing is setting up and maintaining your SSH configuration file. In this you can manage hosts, hostnames, keys, ports and everything else you need to simplify your access to the servers. Compare these commands and you'll realize that you can gain a lot by this:
+-->
+然后，建立和维护SSH配置文件。在这里可以管理主机，主机名，密码，端口等配置来简化服务器访问。比较一下下面的两个访问命令，会发现的确简化了很多：
 
 ```
 ssh -i ~/.ssh/myapp-staging.key staging@123.123.1.9 -p 2223
 
-# instead when using configuration file:
+# 得到相同效果的命令
 
 ssh myapp-staging
 ```
-
+<!--
 All we need for this is to create `~/.ssh/config` and add our configuration for our environments there. For the previous example it could look like this, with host entries added and expanded for covering multiple environments:
+-->
+所有需要做的就是创建`~/.ssh/config`并添加配置。比如：
 
 ```
 Host myapp-staging
@@ -284,5 +326,7 @@ Host myapp-production-db
     User production
     IdentityFile ~/.ssh/myapp-production.key
 ```
-
+<!--
 As you can see, multiple hosts can be defined and you can create one for each of your servers that you manage often. This will save you lots of time in accessing the servers. There are even more cool stuff you can do with it such as specifying wild card hosts and more. You can do some further reading on the [man page for ssh_config](https://www.freebsd.org/cgi/man.cgi?query=ssh_config&sektion=5).
+-->
+如你所见，可以定义多个主机。这样可以节省很多额外记忆、查找和输入的时间。甚至可以使用通配符的方式来配置，详情可以参考[man page for ssh_config](https://www.freebsd.org/cgi/man.cgi?query=ssh_config&sektion=5)
