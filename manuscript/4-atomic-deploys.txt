@@ -1,62 +1,131 @@
-# 4. Atomic deploys
-
+# 4. 部署的原子性
+<!--
 Once upon a time there was a team of developers working on a service for sending e-mail campaigns. Their goal was that the system would allow users to manage subscribers and e-mail templates, so that the user could create e-mail campaigns and send them to their subscribers. The service got its first early adopters and began delivering successful campaigns with happy users. The focus for the team was feature development, adding features that was requested by customers or the ones they felt needed for the service.
+-->
+曾经有一个开发团队做发送邮件活动的服务。他们的目标是系统允许用户管理订阅者和邮件模板，用户可以创建邮件活动，发送给订阅者。这个服务有了一些早期用户，邮件活动进行比较成功，用户的满意度不错。团队的聚焦点是新特性开发，这些特性需求来源于客户的要求和团队自身的分析。
 
+<!--
 The team had a simple infrastructure in place, and they had a plan for when the service (hopefully) had to scale up. They divided it in two logical components. The first component was the one presented to end users, a kind of a mishmash of CMS and CRM. This web component was responsible for creating the e-mails and sending them over to the mail server. The second component, the mail server, had a single responsibility of receiving pre-configured e-mails and sending them out. The components were deployed on two separate cloud instances and the plan was to scale horizontally if the service gained enough traction. When it came to deployment the lead developer would access the instances, pull down the latest changes and complete the steps necessary for a deploy. This was manual labor.
+-->
+此团队有简单的基础设施，并有计划在需要的时候扩展基础设施。团队将其拆分成了两个逻辑组件。第一个组件供终端用户使用，一个CMS和CRM的混合应用。这个web组件来创建邮件并通过邮件服务器发送。第二个组件是邮件服务器，用来取得预先配置的邮件然后发出去。这两个组件部署在两个独立的云实例上，扩展计划是如果服务达到一定规模就进行水平扩展。在发布的时候，开发团队组长会访问实例，拉取最新的变更，完成部署需要的步骤。整个过程是手工的。
 
+<!--
 The service continued to grow, more and more users signed up for it and started using it as their main e-mail marketing channel. Not only did more users sign up but also users with a lot larger subscriber lists migrated over from other similar services. To import subscribers the user had to copy and paste their list(s) into a textarea with one e-mail address on each row. This was insufficient for many users and the most requested feature became an improved importer, being able to upload files with tens, or even hundreds, of thousands subscribers to be imported. The team got to work and once they had a completed feature they rolled it out to the public and immediately notified users about their grand new feature. It became a frequently used feature, especially for users migrating from other services.
+-->
+服务持续增长，越来越多的用户注册并开始使用服务作为主要的邮件市场的通道。不仅仅是用户量增长，每个用户的订阅者也有了增长，增长的订阅者是从其他类似的服务迁移过来的。为了导入订阅者，用户必须复制和粘贴订阅者列表到一个textarea中，每一行是一个订阅者的邮箱。对于很多用户来说，这种导入方式太不易用了，需要得到改进。使得用户能够自己上传文件，文件中有成百上千的订阅者邮箱。开发团队进行了这个新特性开发，并且发布到线上，最后马上通知用户这个心的特性。这个特性称为了一个经常使用的功能，特别是对从其他服务迁移过来的用户。
 
+<!--
 A few weeks went by and suddenly the team started receiving e-mails and phone calls from annoyed users who had used their import feature. The users repeatedly claimed that when they had uploaded their file, they had to wait for a long time before anything happened and all of a sudden the import was canceled for no apparent reason. The team started a thorough investigation and they dove deep into the code and logs trying to reproduce the problem. They set disproportionate time and memory limits for code execution, but to no avail. Instead they tried looking at patterns for when in time this happened, could it be an issue when the load is high? They looked at different monitored values for their servers but couldn't find anything. But what they did find was that the e-mails and phone calls they received with complaints often happened every other week on Mondays. And usually continued to around Wednesday the same week.
+-->
+又过去了数周，团队开始收到邮件和电话投诉，这些投诉来自于使用导入新功能的用户。投诉用户不停的描述说当上传了文件后，必须等待很长的时间，这段时间内系统没有任何反应，然后导入被取消，并且没有任何提示信息。开发团队开始彻底调查，并追查代码和日志，并想复现问题。他们为代码设定了执行时间和内存的限制，但是没有复现。然后他们尝试寻找问题发生时系统的状态，难道是负载很高的时候出现的问题？他们查看了不同的监控数据，但是仍然没有找到问题。但是他们发现他们接到的投诉邮件和电话经常是每周一，并且持续到了周三。
 
+<!--
 It now occurred to the team that the pattern followed their release cycle. They worked in two week sprints and deployed every other Monday. It was these Monday's that the problem occurred. Upon this realisation it became quite obvious what caused the issue. When deploying their application they always restarted the *php-fpm* service just in case. When the service restarted, all users who was running an import (a long running PHP process) would get their import canceled because all PHP processes were killed. It now occurred to the team that their deploy process wasn't *atomic*.
+-->
+然后团队追踪了发布环节。他们的sprint是2周的，然后第二周的周一进行发布。这个时间和投诉的时间很吻合。根据这个关系，很明显是发布环节出问题了。当发布应用的时候，会重启*php-fpm*。当服务重启时，所有正在运行导入功能的用户会被取消导入，因为所有的PHP进程被杀掉了。总的来说，这个团队的发布流程并不是原子的。
 
-## 4.1 What is atomicity?
+## 4.1 原子性是什么?
 
+<!--
 What is an atomic deploy? It's all about hiding things from the rest of the world. Let's take a look at one definition:
+-->
+什么是原子部署？来看看一个定义：
 
+<!--
 > In concurrent programming, an operation (or set of operations) is atomic, linearizable, indivisible or uninterruptible if it appears to the rest of the system to occur instantaneously.[^atomicity]
+-->
+> 在并发编程中，一个操作（或者多个操作的集合）是原子的，线性的，不可分割，不间断的，对于系统的其他部分来说是一瞬间完成的。[^原子性]
 
+<!--
 There are two parts here that is interesting. First of all, atomicity is achieved when one or more operations **appear** to happen instantaneously, and also that a synonym for it is **uninterruptible**. Some call this *Zero Downtime Deployment*, like [Envoyer](https://envoyer.io/) does. Let's go back to the teams issue. When deploying, restarting the *php-fpm* service seemed instantaneous to the person deploying, it was a matter of milliseconds. But in this case it proved to interrupt other parts of the system which broke the atomicity of the deploy.
+-->
+有两部分非常有趣。首先，一个或多个操作是一瞬间发生的，可以理解为是不间断的。也称之为 *零宕机时间部署*，就像[Envoyer](https://envoyer.io/)做的一样。现在回顾一下前面说的开发团队的问题。当部署时，重启*php-fpm*服务好像是一瞬间发生的，只花费几毫秒时间，但是会中断系统的其他部分，也打断了部署的原子性。
 
+<!--
 What we see here is that when an application reaches a critical mass of users and/or a certain complexity, you need to deploy without any interruptions to the service. Striving for your deployment to be fast and responsive just won't cut it; it needs to be atomic. In the previous example, it's not a matter of speed, but of reliability. Even a nanosecond interruption in the *php-fpm* service will result in breaking behaviour for the end user.
+-->
+当应用达到一定规模和复杂度后，在部署的时候是不能中断服务的，是要原子化的。甚至纳秒级别的中断*php-fpm*服务也会导致破坏用户体验。
 
+<!--
 Perhaps you could ask yourself the question, or at least argue for, that it isn't that big of a deal if the user notices or something unintended happens. I could go along with that to a certain extent. However if you're able to solve it, why not keep your users as happy as possible? Interruptions or unintended behaviour could also cause data corruption that you would have to deal with. If we take a look what the other side of the fence might look like, I would say it's quite bad. That would encompass scheduling, notifying users in advance and take your application offline while deploying. In the long run this will most likely not work out. The obvious example is when you need to deploy an urgent hotfix or when the service scales up.
+-->
+<!-- 本段不好直译，进行意译 -->
+被用户察觉到中断的行为是非常不好的，应该尽量让用户察觉不到，不降低用户体验。中断的行为还会导致脏数据，会耗费时间处理。下线服务，上线完成再通知用户的行为是过时的，也降低了用户体验。在发布代码或者服务扩容时，都不应该让用户感知到。
 
-## 4.2 Achieving atomicity
+## 4.2 实现原子性
 
+<!--
 Atomic deploy is when you switch between the previously deployed version and the new one as quick as possible. I'm talking milliseconds or even less, anything slower than that can't be considered atomic. Doing this without your users even noticing is key. Remember the part about making it **appear** instantaneous to the rest of the system? Your application does not need to be very complex or be deployed on an advanced infrastructure, it's enough that somewhere in your process the different parts can come out of sync from each other. Dependencies on packages could get out of sync with your code if the code is updated before dependencies. You also never want to interrupt any current running processes as shown by the example.
+-->
+原子部署需要在版本切换的时候尽可能的快。毫秒级或者更快，如果耗费更多时间就不能认为是原子的。让用户无感知是关键。如果代码更新了，但是依赖未更新，也不是原子的。如果打断了正在进行的请求，也不是原子的。
 
+<!--
 There is a few things that usually need to be in order for achieving atomic deploys and I will go through them below. The next chapter will cover deploy tools and there I'll show you how to do this with the various tools.
+-->
+为了达到原子部署，需要注意几个关键点，下面分别介绍这几点。下一章会介绍部署工具，并结合工具介绍如何达到这里介绍的关键点。
 
-## 4.3 Concept of builds
+## 4.3 构建的概念
 
+<!--
 Even though we as PHP developers seldom had to consider the concept of builds of our application it's getting more frequent and we must internalize this for achieving atomic deploys. If we can not create a separate build while deploying, it's not possible. Or actually we could do that with a smart infrastructure, shutting down traffic to servers that are in "deploy mode". But for the sake of argument and simplicity we won't go down that route. There is a simple way of doing this on one server; all we need to do is create a build in a folder that is not being served to our users. Then we can do the old switcheroo on the currently deployed build and the *to be* deployed build without the user noticing.
+-->
+PHP开发者很少考虑构建，但是为了达到原子部署，是需要考虑的时候了。如果在部署时不创建一个单独的构建，是不可能达到原子部署的目标的。如果有一个智能的基础设施，能够对在"部署模式"下的服务器自动切断流量，是可以达到原子部署的。为了简化讨论，本书不探讨这种智能的基础设施。有更简单的方式达到同样的目的，需要做的就是在一个并不服务当前用户的目录下创建一个构建，然后从当前版本切换到新构建的版本，并在此期间让用户无感知。
 
+<!--
 Having an appropriate folder structure for allowing this is simple. I will later in this chapter propose a structure, but there are other components to this that I want to discuss prior to it. For now just consider a folder with your application with all dependencies and configuration complete as a build. I would consider a build complete if you can put it anywhere on your server and serve it to your users.
+-->
+合适的目录结构使得这个过程简单化。本书会在本章后面建议一个目录结构。在此之前，本书会讨论另外一个组件。暂时考虑应用将所有依赖和配置一起作为一个构建，并认为将构建的目录放置在合适的目录下，并服务用户才是一个完整的构建。
 
+<!--
 When switching builds you should also save a number of older builds, perhaps the five or ten previous builds. This allows for quick rollbacks and can be crucial if a deploy needs to be reversed. How many you should save is impossible to answer so just go with a number you feel comfortable with, it also depends on your release cycle. If you deploy once a week or once a day you can probably without any discomfort save your five or ten last builds. If you're deploying continuously on every commit then you should probably save a lot more than five.
+-->
+当在不同的构建之间切换时，需要保留一些旧的构建，比如5个或者10个更老的构建。这样能在一次部署后快速的回滚。具体保留多少旧的构建，应该具体应用具体分析，如果一周部署一次或者一天部署一次，可以保留5个或者10个构建。如果是对每一次提交进行持续部署，应该至少保留5个。
 
-## 4.4 File persisted data (shared data)
+## 4.4 持久化数据 (共享数据)
 
+<!--
 When switching out a previously deployed build for the new one you must assure that no file persisted data is lost. One example of this is if your application stores session data or user uploaded files inside your application folder. If you switch out the old build for a clean new one, users might be logged out or data could be lost. And this is never an ideal scenario.
+-->
+当从老版本切换到新版本时，需要确认持久化的数据没有丢失。比如用户的会话数据，用户上传的文件。
 
+<!--
 On the other hand there could be file persisted data that you do not care if it gets lost, maybe you would even prefer that it does. If your application has a cache for rendered templates you'd probably prefer if that cache is wiped so your underlying logic and presented views won't get out of sync. In these cases just make sure that your new build replaces or wipes these folders.
+-->
+有些持久化数据是在切换版本时不能保留的，比如应用的渲染模板的缓存，这样更新版本后，不会用到以前的老缓存。这种情况下，需要在新的构建中替换或者清除对应的目录。
 
+<!--
 What is important here is to identify the files and/or folders that needs to remain persistent between builds. I refer to these files or folders as **shared data** and I will show how to deal with this in the proposed folder structure.
+-->
+关键是要区分一个目录在新旧构建中是应该保留还是清除。本书将这些文件和目录称之为**共享数据**，并会在后面建议的目录结构中讲解如何处理。
 
-## 4.5 Symbolic folder links
+## 4.5 符号目录链接
 
+<!--
 Although it's not really necessary, but to grok symbolic folder links (*symlinks*) is strongly advised. What we want to do with symlinks is also possible by just copying or moving directories. But to make things atomic we should leverage symlinks since they are pretty much instant.
+-->
+利用符号目录链接(*符号链接*)可以复制和移动目录，并能实现原子部署。
 
+<!--
 A symlink looks like a folder or a file that appear to exist in a location. But the symlink is a reference to a file or a folder in another location. It allows us to instantly switch out which folder or file a symlink is pointing to. When we deploy and want to switch out the old build, we just update a symlink to point to our new build instead. Likewise we will do this for shared data. In that way we make the switch extremely fast and can make sure that our shared data is there when we need it and is stored in one location only.
+-->
+符号链接看起来像是在某个位置下的一个目录或者文件。但是符号链接是对另一个位置的文件或目录的引用。在部署新的构建时，只需要更新符号链接指向新的构建即可。同样的，可以对共享数据也采用这个技术，使得切换是足够快的，并且保证共享数据虽然在一个位置下存储，但是在需要的位置也可以访问到。
 
+<!--
 For Linux users, it's the [`ln`](http://www.unix.com/man-page/posix/1posix/ln/) command. It's possible on Windows but it's complicated and I suggest doing a Google search for it.
+-->
+对于Linux用户来说，可以使用[`ln`](http://www.unix.com/man-page/posix/1posix/ln/)命令创建符号链接。Windows下也可以使用，但是比较复杂，建议Google搜索。（译者注：Windows下可以使用MinGW等类Linux环境来使用ln命令）
 
-## 4.6 Proposed folder structure {#atomic-folder-structure}
+## 4.6 建议的目录结构 {#原子化的目录结构}
 
+<!--
 The proposed folder structure needs to reside inside a root directory somewhere. Where that is doesn't really matter, it just needs to contain the following structure. How you develop your application is not of importance and this example assumes that the folder structure is on the server serving the application.
+-->
+建议的目录结构的根目录可以在任何位置，和项目相关，不是这里需要讨论的问题，各个子目录才是需要讨论的。
 
+<!--
 The names of the folders inside the root are arbitrary, name them as you please. My examples that follow will use this structure and it looks like this:
+-->
+根目录中的目录名称可以随意命名。一种可能的命名如下：
 
 ~~~
 ├── builds/
@@ -75,24 +144,53 @@ The names of the folders inside the root are arbitrary, name them as you please.
     └── sessions/
 ~~~
 
+<!--
 **builds/** - this folder contains the X number of builds that I discussed earlier. Perhaps the current one deployed and the four previous ones. I suggest naming all builds with a timestamp with date and time down to seconds, you never want a build to overwrite a previous build by accident.
+-->
+**builds目录** - 此目录包含X个版本的构建。也许是一个当前部署的版本和四个之前的版本。建议以日期加时间戳的方式命名所有的构建，这样可以避免命名冲突的问题。
 
+<!--
 **latest/** - symlink to the current build that is deployed. Your web server will use this folder as its document root for your site. Unless there is a subfolder that should be served, depending on your set up and framework.
+-->
+**latest目录** - 对于部署的当前构建的符号链接。web服务器会使用此目录作为网站的根目录。此目录下会有与你应用相关的各个子目录和文件。
 
+<!--
 **repository/** - the folder where the repository resides and this is what we will make builds from.
+-->
+**repository目录** - 代码库所在目录，从此目录下进行构建。
 
+<!--
 **shared/** - any shared data that needs to be persisted between builds will reside here. It can be both files and folders.
+-->
+**shared目录** - 任何在各个构建之间需要共享的数据存放在这里。可以是文件或者子目录。
 
-## 4.7 Pseudo deploy process
+## 4.7 部署流程
 
+<!--
 The process for making an atomic deploy is then straight forward:
+-->
+基于以上的介绍，原子部署的流程可以按照如下描述：
 
+<!--
 * Update the code in *repository/*, probably through pulling the latest changes from your remote.
 * Update dependencies and configuration, this is also done in *repository/*.
 * Make a copy of *repository/* to a folder in *builds/*.
 * Update the symlink *latest/* to point to the new build that was copied.
 * Remove excessive builds in *builds/*.
+-->
+* 在*repository目录*下更新代码，比如说从代码库拉取最新的变更。
+* 在*repository目录*下更新依赖和配置。
+* 在*builds目录*下复制一份*repository目录*
+* 更新*latest目录*符号链接，指向刚刚拷贝的新的构建
+* 从*builds目录*下移除多余的老的构建
 
+<!--
 Need to perform a rollback? Update the symlink *latest/* to point to the previous build you want deployed.
+-->
+需要回滚的时候，仅仅需要更新*latest目录*的符号链接指向上一个版本即可。
 
+<!--
 [^atomicity]: [http://en.wikipedia.org/wiki/Linearizability](http://en.wikipedia.org/wiki/Linearizability)
+-->
+[^原子性]: [http://en.wikipedia.org/wiki/Linearizability](http://en.wikipedia.org/wiki/Linearizability)
+
