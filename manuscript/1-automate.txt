@@ -1,20 +1,39 @@
-# 1. Automate, automate, automate
+# 1. 自动化，自动化，自动化，重要的事情说三遍
 
+<!--
 I want to get this off the bat right away since one of the most crucial ingredients in your deployment process should be to **automate everything** in order to **minimize human errors**. If your deployment process involves manual steps, you're going to have a bad time and shit will hit the inevitable fan. Nobody is perfect. People can, and will, forget if they need to remember.
+-->
+开发过程中最重要的一点是**将一切自动化**，**使得人为犯错的几率变得最低**。如果部署过程有人为的步骤，那么一定会有犯错的时候。没人是完美的。对于需要记忆的东西，人们往往会忘记。
 
+<!--
 An automated deployment process will boost the confidence for the person deploying. Knowing that everything will be taken care of is a major contributor to feeling safe during a deploy. Of course other unexpected issues can arise but with a flexible process with logging and notifications you can relax and figure out what went wrong.
+-->
+自动化的部署流程会让人对部署过程充满自信。在部署过程中，知道部署流程考虑到了每一个关键的步骤是让人心安的主要因素。当然意外情况仍然有可能发生，但是在有日志和通知的充满弹性的流程中，你可以放松并且轻而易举的知道哪里出现了错误。
 
-## 1.1 One button to rule them all
 
+## 1.1 一键发布
+
+<!--
 You should have **one** button to push or **one** command to run, to deploy your application. If you don't, something is wrong and you should automate all steps. Perhaps the only manual intervention I would consider okay is *"Are you sure? This will push stuff to production. [N/y]"*. This might be a bold statement but I truly believe in it.
+-->
+你应该有且只有**一个**按钮来发布或者**一个**按钮来执行部署命令。如果不是这样的，错误的发生是必然的，你应该自动化剩下的步骤。本书认为唯一需要手工干涉的就是在点击按钮或者执行命令后有一个*是否确定部署，确定后会部署到生产环境。[N/y]*的流程。
 
+<!--
 Even if you're the only developer on a project and you're deploying the application each time I would say it's a bad practice having manual steps. When it comes to teams it becomes a lot worse since if not all team members are familiar with the deployment steps they won't be able to deploy. Team members come and go and whenever a new team member arrive they will need to learn how to deploy in the correct manner. Sure there can be documentation for it. But whenever someone is familiar enough with it they will most likely start to deploy without it.
+-->
+即使项目中只有一个开发者，手工操作部署流程仍然是很不好的实践。当团队扩大时，并不是每一个成员都数据需要手工的步骤，会导致出现很糟糕的情况。团队成员有离开和新加入的，新加入的团队成员必须学习怎样手工部署。可能有很好的文档，但是得非常熟悉才能开始部署。这些都是手工部署的问题。
 
-## 1.2 Example of a manual step
+## 1.2 手工部署的例子
 
+<!--
 Let's take an example where you have a revision number of your assets in code. I would say this is a rather common practice (unfortunately) and I've seen it on many occasions. This revision number handles cache busting so browsers do not keep serving old assets after a deploy.
+-->
+来考虑一下代码中的资源需要更新的这个用例，资源往往会携带一个版本号，这是一个很常见的用例。版本号处理了缓存问题，这样浏览器在部署后就不用关心老的版本号的资源。
 
+<!--
 This definition is a constant in a class somewhere for managing static assets.
+-->
+这里定义了一个类来管理静态资源。
 
 {lang=php}
 ~~~~~~~~
@@ -26,19 +45,35 @@ class Assets
 }
 ~~~~~~~~
 
+<!--
 Then it's applied to the static assets.
+-->
+然后将其应用于静态资源上。
 
 {lang=html}
 ~~~~~~~~
 <link rel="stylesheet" type="text/css" href="style.css?v=<?=Assets::REVISION?>">
 ~~~~~~~~
 
+<!--
 This is truly bad manual steps you could have. It is easy to forget since it requires a code change and if it's forgotten it might break the users' experience serving cached and out dated assets. A manual step where you would have to run a command in connection to the deploy would be better since it would be easier to remember. When you are already have the command line in front of you will be more prone to remember it.
+-->
+这是一个非常不好的手工步骤，因为需要每次上线都修改代码Assets中的版本号，比如变为15。在部署的时候非常容易遗忘这个过程。如果遗忘了，会导致用户端使用新的代码，但是使用的老的静态资源，导致一些无法预料的错误。如果在部署过程中，只有执行一个命令这一个手工步骤，就容易多了，不会犯错。
 
+<!--
 Since it requires a code change another issue will likely occur. That is when you remember the step in the middle of the deploy just before pushing changes to production. You stop yourself before pressing the button screaming "Shit, the assets revision number!". Now you have to deal with changing the code, committing it and push the code through a new deploy. In a perfect world you would've already merged a release branch and tagged it (discussed in chapter 2), so how would you approach that now? Reset your repository, remove the tag, commit and create the release branch again? Or would you just commit and push, knowing that it will break [traceability](http://en.wikipedia.org/wiki/Traceability#Software_development) for this specific deploy? This is a problem that goes away with automation.
+-->
+还有另外一个问题，当在部署过程中发现了忘记修改版本号这一步，就需要停下来，郁闷的说"NND，资源版本号还没有修改！"。然后，修改版本号，提交，然后重新发布。在合理的开发流程中有可能已经合并了分支并且打上了标签（第二章会讨论），所以修改后的版本号怎么做了？是重设代码仓库，移除标签，提交和再次创建发布分支？还是仅仅提交和推送（这样会导致代码不可[回溯](http://en.wikipedia.org/wiki/Traceability#Software_development)）？这些都是没有自动化导致的问题。
 
-## 1.3 Time is always a factor
+## 1.3 时间紧总是借口
 
+<!--
 You might be prone to say that you don't have time automating all the trivial steps or commands. If you spend one hour automating a command that takes one second to run you would have to run that command 3601 times before you have saved time on it. Yes, I did the math. While this is true I would say that it isn't the whole truth.
+-->
+开发者总是倾向于说没有时间来将所有细小的步骤自动化。如果需要花费一小时来实现一个手工操作只需要一秒钟的自动化，在这之前，你可能已经已经执行3601次了，这已经是可以实现自动化的时间了。所以说借口终归是借口。
 
+<!--
 We need to take into account the time spent on dealing with issues arising when forgetting the step or command. Time spent on cleaning up. Can you measure bad user experience when your application breaks or behaves incorrect? Most likely not. In the previous example you can't tell how much time that you will spend on correcting that error and neither can you tell the impact on the users. If the problem is not caught in time it could persist for a long time.
+-->
+我们需要考虑到处理因为遗漏手工步骤引起的问题的时间消耗，但是因此而导致的用户体验的损失是没办法衡量的。在上一个例子中，也没办法衡量修复错误消耗的时间。如果问题没有及时发现，可能会在生产环境存在很长时间。
+

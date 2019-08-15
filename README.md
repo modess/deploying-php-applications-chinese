@@ -1,4 +1,4 @@
-Deploying PHP Applications
+部署PHP应用中文版
 ==========================
 
 This repository contains the entire book [Deploying PHP applications](https://leanpub.com/deploying-php-applications) with code samples. If you enjoy the book, please consider [buying it on Leanpub](https://leanpub.com/deploying-php-applications)!
